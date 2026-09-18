@@ -316,11 +316,14 @@ def get_dashboard_stats():
     )
     
     POOL_FILTER = (
+        Lead.user_id.is_(None) &
+        Lead.market_id.isnot(None) &
+        Lead.score.isnot(None) &
+        Lead.segment.isnot(None) &
+        Lead.vertical.ilike('%NeuronUP%') &
         ~Lead.stage.ilike('%Disqualified%') &
         ~Lead.stage.ilike('%Qualified%') &
-        ~Lead.pipeline.in_(EXCLUDED_PIPELINES) &
-        Lead.market_id.isnot(None) &
-        (Lead.score > 0)
+        ~Lead.pipeline.ilike('%Leads Academy%')
     )
     
     WORKLOAD_FILTER = (
