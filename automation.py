@@ -129,9 +129,9 @@ def get_candidate_leads_from_pool():
         Lead.score.isnot(None),
         Lead.segment.isnot(None),
         Lead.vertical.ilike('%NeuronUP%'),
-        Lead.stage.ilike('%Disqualified%'),
-        Lead.stage.ilike('%Qualified%'),
-        Lead.pipeline.ilike('%Leads Academy%'),
+        ~Lead.stage.ilike('%Disqualified%'),
+        ~Lead.stage.ilike('%Qualified%'),
+        ~Lead.pipeline.ilike('%Leads Academy%'),
     ).order_by(Lead.score.desc()).all()
 
 
