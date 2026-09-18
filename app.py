@@ -35,6 +35,17 @@ with app.app_context():
         db.session.add(default_settings)
         db.session.commit()
 
+
+
+def run_distribution_with_context():
+    with app.app_context():
+        log("INFO", "CRON", "Iniciando distribución automática programada...")
+        try:
+            assigned = run_distribution()
+            log("INFO", "CRON", f"Distribución programada completada: {assigned} leads asignados")
+        except Exception as e:
+            log("ERROR", "CRON", f"Error en distribución programada: {str(e)}")
+
 # ────── Function: run_sync_incremental_with_context ───────────────────────
 # ─── Wrapper que ejecuta run_sync_incremental con el contexto de Flask
 # ─── Captura excepciones y las registra en el log
