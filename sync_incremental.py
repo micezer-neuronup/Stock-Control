@@ -50,7 +50,7 @@ HUBSPOT_LEAD_PROPERTIES = [
     "hs_lead_name", "sdr_who_manages", "hs_pipeline", "hs_pipeline_stage",
     "inbound_outbound", "hs_analytics_source_data_1", "hs_analytics_source",
     "industry", "market_hubspot", "hs_createdate", "hs_lastmodifieddate",
-    "lead_priority_score",
+    "lead_priority_score", "vertical_negocio_lead", "segmento",
 ]
 
 
@@ -66,12 +66,12 @@ def _parse_ts(raw):
 
 
 def _parse_score(raw):
+    if raw in (None, ""):
+        return None
     try:
-        if raw in (None, ""):
-            return 0
         return int(float(raw))
     except (ValueError, TypeError):
-        return 0
+        return None
 
 
 def _do_sync(since_ts, max_pages=200):
@@ -148,7 +148,8 @@ def _do_sync(since_ts, max_pages=200):
             origin = props.get("inbound_outbound") or None
             first_source = props.get("hs_analytics_source_data_1")
             current_source = props.get("hs_analytics_source")
-            vertical = props.get("industry")
+            vertical = props.get("vertical_negocio_lead")
+            segment = props.get("segmento")
             created_at_dt = _parse_ts(props.get("hs_createdate"))
             score_value = _parse_score(props.get("lead_priority_score"))
 
@@ -164,6 +165,7 @@ def _do_sync(since_ts, max_pages=200):
                 existing.first_source_hubspot = first_source
                 existing.current_source_hubspot = current_source
                 existing.vertical = vertical
+                existing.segment = segment 
                 existing.score = score_value
                 existing.created_at = created_at_dt
                 updated += 1
@@ -179,6 +181,7 @@ def _do_sync(since_ts, max_pages=200):
                     first_source_hubspot=first_source,
                     current_source_hubspot=current_source,
                     vertical=vertical,
+                    segment=segment,
                     score=score_value,
                     created_at=created_at_dt,
                 )

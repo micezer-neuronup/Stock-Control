@@ -125,11 +125,13 @@ def get_sdrs_needing_restock():
 def get_candidate_leads_from_pool():
     return Lead.query.filter(
         Lead.user_id.is_(None),
-        ~Lead.stage.ilike('%Disqualified%'),
-        ~Lead.stage.ilike('%Qualified%'),
-        ~Lead.pipeline.ilike('%Leads Academy%'),
         Lead.market_id.isnot(None),
-        Lead.score > 0
+        Lead.score.isnot(None),
+        Lead.segment.isnot(None),
+        Lead.vertical.ilike('%NeuronUP%'),
+        Lead.stage.ilike('%Disqualified%'),
+        Lead.stage.ilike('%Qualified%'),
+        Lead.pipeline.ilike('%Leads Academy%'),
     ).order_by(Lead.score.desc()).all()
 
 

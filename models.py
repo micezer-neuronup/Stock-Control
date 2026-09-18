@@ -61,7 +61,8 @@ class Lead(db.Model):
     first_source_hubspot = db.Column(db.String(255))
     current_source_hubspot = db.Column(db.String(255))
     vertical = db.Column(db.String(255))
-    score = db.Column(db.Integer, default=0)
+    segment = db.Column(db.String(100))                      # ← nuevo
+    score = db.Column(db.Integer, nullable=True)             # ← ya no default=0
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
