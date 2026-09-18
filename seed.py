@@ -1,26 +1,39 @@
 from app import app
-from models import db, GlobalSettings, Market, User, Lead, LeadHistory
+from models import db, GlobalSettings, Market
+
 
 def seed_database():
     with app.app_context():
-        print("🌱 Limpiando base de datos...")
-        # Borrar datos previos en orden inverso por las FK
-        db.session.query(User).delete()
-        db.session.query(Market).delete()
+        db.create_all()
+
+        # GlobalSettings
+        if not GlobalSettings.query.first():
+            db.session.add(GlobalSettings(automation_enabled=True))
+            db.session.commit()
+            print("✅ GlobalSettings creado")
+        else:
+            print("ℹ️  GlobalSettings ya existe")
+
+        # Mercados con IDs forzados (coinciden con MARKET_MAPPING de automation.py)
+        markets_data = [
+            (1, "España", "🇪🇸", True),
+            (2, "Brasil - Portugal", "🇧🇷🇵🇹", True),
+            (3, "Francia", "🇫🇷", False),
+            (4, "LATAM", "🌎", True),
+            (5, "Italia", "🇮🇹", True),
+        ]
+
+        created = 0
+        for mid, name, flag, auto in markets_data:
+            if not db.session.get(Market, mid):
+                db.session.add(Market(id=mid, name=name, flag=flag, automation_enabled=auto))
+                created += 1
         db.session.commit()
+        print(f"✅ Mercados: {created} nuevos (total {Market.query.count()})")
 
-        print("🌍 Creando mercados...")
-        es_market = Market(name="España", automation_enabled=True)
-        bp_market = Market(name="Brasil-Portugal", automation_enabled=True)
-        fr_market = Market(name="Francia", automation_enabled=False)
-        latam_market = Market(name="LATAM", automation_enabled=True)
-        it_market = Market(name="Italia", automation_enabled=True)
+        for m in Market.query.order_by(Market.id).all():
+            print(f"   {m.id}  {m.name}  automation={m.automation_enabled}")
 
-        # Añadimos TODOS los mercados creados
-        db.session.add_all([es_market, bp_market, fr_market, latam_market, it_market])
-        db.session.commit() # Guardamos para generar los IDs
-
-        print("✅ Base de datos poblada con éxito!")
 
 if __name__ == "__main__":
     seed_database()
