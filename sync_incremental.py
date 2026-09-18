@@ -77,7 +77,8 @@ def _parse_score(raw):
 def _do_sync(since_ts, max_pages=200):
     """
     Sincroniza leads modificados desde 'since_ts' (datetime naive UTC).
-    Devuelve (imported, updated, skipped_academy, new_last_sync)
+    Devuelve (imported, updated, skipped_academy, new_last_sync).
+    new_last_sync es None si hubo error (para no actualizar el timestamp).
     """
     headers = {
         "Authorization": f"Bearer {HUBSPOT_TOKEN}",
@@ -93,6 +94,7 @@ def _do_sync(since_ts, max_pages=200):
     updated = 0
     skipped_academy = 0
     pages = 0
+    had_error = False
 
     user_map = {u.hubspot_user_id: u.id for u in User.query.all() if u.hubspot_user_id}
 
@@ -102,7 +104,7 @@ def _do_sync(since_ts, max_pages=200):
             "filterGroups": [{
                 "filters": [{
                     "propertyName": "hs_lastmodifieddate",
-                    "operator": "GREATER_THAN",
+                    "operator": "GT",
                     "value": since_ms,
                 }]
             }],
@@ -116,6 +118,7 @@ def _do_sync(since_ts, max_pages=200):
         r = requests.post(url, headers=headers, json=body)
         if r.status_code != 200:
             print(f"❌ Error HubSpot search: {r.status_code} - {r.text[:300]}")
+            had_error = True
             break
 
         data = r.json()
@@ -189,6 +192,9 @@ def _do_sync(since_ts, max_pages=200):
         if not after:
             break
 
+    if had_error:
+        return imported, updated, skipped_academy, None
+
     new_last_sync = datetime.utcnow()
     return imported, updated, skipped_academy, new_last_sync
 
@@ -206,11 +212,15 @@ def run_sync_incremental():
 
     imported, updated, skipped, new_ts = _do_sync(since)
 
-    settings.last_sync_timestamp = new_ts
-    db.session.commit()
+    if new_ts is not None:
+        settings.last_sync_timestamp = new_ts
+        db.session.commit()
+        print(f"✅ Sync completado: {imported} nuevos, {updated} actualizados, {skipped} Academy ignorados")
+        print(f"   next last_sync_timestamp = {new_ts}")
+    else:
+        print(f"⚠️  Sync falló tras {imported} nuevos, {updated} actualizados, {skipped} Academy ignorados")
+        print(f"   last_sync_timestamp NO actualizado (sigue en {since})")
 
-    print(f"✅ Sync completado: {imported} nuevos, {updated} actualizados, {skipped} Academy ignorados")
-    print(f"   next last_sync_timestamp = {new_ts}")
     return imported + updated
 
 
