@@ -49,9 +49,9 @@ def run_sync_incremental_with_context():
             log("ERROR", "CRON", f"Error en sync incremental: {str(e)}")
 
 
- scheduler = BackgroundScheduler(timezone="Europe/Madrid")
+scheduler = BackgroundScheduler(timezone="Europe/Madrid")
 
- if not scheduler.get_job("daily_distribution"):
+if not scheduler.get_job("daily_distribution"):
      scheduler.add_job(
          run_distribution_with_context,
          CronTrigger(minute=30),
@@ -66,7 +66,7 @@ def run_sync_incremental_with_context():
      )
      scheduler.start()
      log("INFO", "CRON", "Scheduler iniciado: distribución diaria 12:00 + sync incremental cada hora (Europe/Madrid)")
- else:
+else:
      log("INFO", "CRON", "Scheduler ya estaba iniciado")
 
 
