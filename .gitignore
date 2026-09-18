@@ -6,4 +6,8 @@ __pycache__/
 *.sqlite
 *.sqlite3
 .DS_Store
-.pytest_cache/
+.pytest_cache/docker-compose.yml
+docker-compose.yaml
+Dockerfile
+dockerfile
+.dockerignore
