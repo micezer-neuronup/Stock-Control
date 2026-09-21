@@ -84,6 +84,9 @@ def _do_sync(since_ts, max_pages=200):
         "Authorization": f"Bearer {HUBSPOT_TOKEN}",
         "Content-Type": "application/json",
     }
+    
+    max_lastmodified_ms = None
+
 
     url = "https://api.hubspot.com/crm/v3/objects/leads/search"
 
@@ -132,6 +135,16 @@ def _do_sync(since_ts, max_pages=200):
             if raw_pipeline == "3784347861" or pipeline_name == "Leads Academy":
                 skipped_academy += 1
                 continue
+            
+            lm = props.get("hs_lastmodifieddate")
+
+            if lm:
+                try:
+                    lm_ms = int(lm) if not isinstance(lm, str) else int(lm)
+                    if max_lastmodified_ms is None or lm_ms > max_lastmodified_ms:
+                        max_lastmodified_ms = lm_ms
+                except (ValueError, TypeError):
+                    pass
 
             lead_id = str(hs_lead["id"])
 
@@ -197,8 +210,13 @@ def _do_sync(since_ts, max_pages=200):
 
     if had_error:
         return imported, updated, skipped_academy, None
+    
+    if max_lastmodified_ms is not None:
+        new_last_sync = datetime.utcfromtimestamp(max_lastmodified_ms / 1000.0)
+    
+    else:
+        new_last_sync = since_ts
 
-    new_last_sync = datetime.utcnow()
     return imported, updated, skipped_academy, new_last_sync
 
 
