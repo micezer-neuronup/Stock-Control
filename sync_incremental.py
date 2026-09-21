@@ -4,6 +4,7 @@
 # ──────────────────────────────────────────────────────────────────────────
 
 import os
+import time
 import requests
 from datetime import datetime, timezone
 
@@ -74,7 +75,7 @@ def _parse_score(raw):
         return None
 
 
-def _do_sync(since_ts, max_pages=200):
+def _do_sync(since_ts, max_pages=2000):
     """
     Sincroniza leads modificados desde 'since_ts' (datetime naive UTC).
     Devuelve (imported, updated, skipped_academy, new_last_sync, had_error).
@@ -115,9 +116,21 @@ def _do_sync(since_ts, max_pages=200):
         if after:
             body["after"] = after
 
-        r = requests.post(url, headers=headers, json=body)
-        if r.status_code != 200:
-            print(f"❌ Error HubSpot search: {r.status_code} - {r.text[:300]}")
+        # Reintentos con backoff exponencial en caso de 429
+        r = None
+        for attempt in range(6):
+            r = requests.post(url, headers=headers, json=body)
+            if r.status_code == 429:
+                wait = 2 ** attempt  # 1, 2, 4, 8, 16, 32 segundos
+                print(f"⏳ Rate limit 429, esperando {wait}s (intento {attempt+1}/6)...")
+                time.sleep(wait)
+                continue
+            break
+
+        if r is None or r.status_code != 200:
+            status = r.status_code if r is not None else "N/A"
+            text = r.text[:300] if r is not None else ""
+            print(f"❌ Error HubSpot search: {status} - {text}")
             had_error = True
             break
 
@@ -153,7 +166,6 @@ def _do_sync(since_ts, max_pages=200):
             local_user_id = user_map.get(sdr_who) if sdr_who else None
             raw_owner = sdr_who or None
 
-
             raw_stage = props.get("hs_pipeline_stage") or ""
             stage_name = STAGE_MAP.get(raw_stage, raw_stage or "NEW")
 
@@ -187,9 +199,9 @@ def _do_sync(since_ts, max_pages=200):
                 new_lead = Lead(
                     id=lead_id,
                     name=name,
-                    raw_owner=raw_owner,
                     market_id=assigned_market_id,
                     user_id=local_user_id,
+                    raw_owner=raw_owner,
                     pipeline=pipeline_name,
                     stage=stage_name,
                     origin=origin,
@@ -210,11 +222,12 @@ def _do_sync(since_ts, max_pages=200):
         if not after:
             break
 
-    # Determinar nuevo timestamp
+        # Pausa entre páginas para no petar el rate limit
+        time.sleep(0.3)
+
     if max_lastmodified_ms is not None:
         new_last_sync = datetime.utcfromtimestamp(max_lastmodified_ms / 1000.0)
     else:
-        # No vinieron resultados (o todos Academy). Avanzamos a "ahora" menos 1 min para no perder nada.
         new_last_sync = datetime.utcnow()
 
     return imported, updated, skipped_academy, new_last_sync, had_error
