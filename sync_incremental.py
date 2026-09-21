@@ -77,18 +77,15 @@ def _parse_score(raw):
 def _do_sync(since_ts, max_pages=200):
     """
     Sincroniza leads modificados desde 'since_ts' (datetime naive UTC).
-    Devuelve (imported, updated, skipped_academy, new_last_sync).
-    new_last_sync es None si hubo error (para no actualizar el timestamp).
+    Devuelve (imported, updated, skipped_academy, new_last_sync, had_error).
     """
     headers = {
         "Authorization": f"Bearer {HUBSPOT_TOKEN}",
         "Content-Type": "application/json",
     }
-    
+
     max_lastmodified_ms = None
-
-
-    url = "https://api.hubspot.com/crm/v3/objects/leads/search"
+    url = "https://api.hubapi.com/crm/v3/objects/leads/search"
 
     since_ms = int(since_ts.replace(tzinfo=timezone.utc).timestamp() * 1000) if since_ts else 0
 
@@ -129,22 +126,23 @@ def _do_sync(since_ts, max_pages=200):
 
         for hs_lead in results:
             props = hs_lead.get("properties", {})
+
+            # Capturar hs_lastmodifieddate ANTES de cualquier continue
+            lm = props.get("hs_lastmodifieddate")
+            if lm:
+                try:
+                    lm_ms = int(lm)
+                    if max_lastmodified_ms is None or lm_ms > max_lastmodified_ms:
+                        max_lastmodified_ms = lm_ms
+                except (ValueError, TypeError):
+                    pass
+
             raw_pipeline = props.get("hs_pipeline") or ""
             pipeline_name = PIPELINE_MAP.get(raw_pipeline, raw_pipeline or "Sin Pipeline")
 
             if raw_pipeline == "3784347861" or pipeline_name == "Leads Academy":
                 skipped_academy += 1
                 continue
-            
-            lm = props.get("hs_lastmodifieddate")
-
-            if lm:
-                try:
-                    lm_ms = int(lm) if not isinstance(lm, str) else int(lm)
-                    if max_lastmodified_ms is None or lm_ms > max_lastmodified_ms:
-                        max_lastmodified_ms = lm_ms
-                except (ValueError, TypeError):
-                    pass
 
             lead_id = str(hs_lead["id"])
 
@@ -178,7 +176,7 @@ def _do_sync(since_ts, max_pages=200):
                 existing.first_source_hubspot = first_source
                 existing.current_source_hubspot = current_source
                 existing.vertical = vertical
-                existing.segment = segment 
+                existing.segment = segment
                 existing.score = score_value
                 existing.created_at = created_at_dt
                 updated += 1
@@ -208,16 +206,14 @@ def _do_sync(since_ts, max_pages=200):
         if not after:
             break
 
-    if had_error:
-        return imported, updated, skipped_academy, None
-    
+    # Determinar nuevo timestamp
     if max_lastmodified_ms is not None:
         new_last_sync = datetime.utcfromtimestamp(max_lastmodified_ms / 1000.0)
-    
     else:
-        new_last_sync = since_ts
+        # No vinieron resultados (o todos Academy). Avanzamos a "ahora" menos 1 min para no perder nada.
+        new_last_sync = datetime.utcnow()
 
-    return imported, updated, skipped_academy, new_last_sync
+    return imported, updated, skipped_academy, new_last_sync, had_error
 
 
 def run_sync_incremental():
@@ -231,16 +227,16 @@ def run_sync_incremental():
     since = settings.last_sync_timestamp
     print(f"🔄 Sync incremental desde: {since or 'PRIMERA VEZ (todo)'}")
 
-    imported, updated, skipped, new_ts = _do_sync(since)
+    imported, updated, skipped, new_ts, had_error = _do_sync(since)
 
-    if new_ts is not None:
+    if had_error:
+        print(f"⚠️  Sync falló tras {imported} nuevos, {updated} actualizados, {skipped} Academy ignorados")
+        print(f"   last_sync_timestamp NO actualizado (sigue en {since})")
+    else:
         settings.last_sync_timestamp = new_ts
         db.session.commit()
         print(f"✅ Sync completado: {imported} nuevos, {updated} actualizados, {skipped} Academy ignorados")
         print(f"   next last_sync_timestamp = {new_ts}")
-    else:
-        print(f"⚠️  Sync falló tras {imported} nuevos, {updated} actualizados, {skipped} Academy ignorados")
-        print(f"   last_sync_timestamp NO actualizado (sigue en {since})")
 
     return imported + updated
 
