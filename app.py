@@ -316,7 +316,7 @@ def get_dashboard_stats():
     )
     
     POOL_FILTER = (
-        Lead.user_id.is_(None) &
+        (Lead.raw_owner.is_(None) | (Lead.raw_owner == '')) &
         Lead.market_id.isnot(None) &
         Lead.score.isnot(None) &
         Lead.segment.isnot(None) &

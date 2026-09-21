@@ -64,6 +64,7 @@ class Lead(db.Model):
     segment = db.Column(db.String(100))                      # ← nuevo
     score = db.Column(db.Integer, nullable=True)             # ← ya no default=0
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    raw_owner = db.Column(db.String(100))
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class LeadHistory(db.Model):

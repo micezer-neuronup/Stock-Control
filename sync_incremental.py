@@ -151,6 +151,8 @@ def _do_sync(since_ts, max_pages=200):
 
             sdr_who = props.get("sdr_who_manages")
             local_user_id = user_map.get(sdr_who) if sdr_who else None
+            raw_owner = sdr_who or None
+
 
             raw_stage = props.get("hs_pipeline_stage") or ""
             stage_name = STAGE_MAP.get(raw_stage, raw_stage or "NEW")
@@ -169,6 +171,7 @@ def _do_sync(since_ts, max_pages=200):
             if existing:
                 existing.name = name
                 existing.user_id = local_user_id
+                existing.raw_owner = raw_owner
                 existing.market_id = assigned_market_id
                 existing.pipeline = pipeline_name
                 existing.stage = stage_name
@@ -184,6 +187,7 @@ def _do_sync(since_ts, max_pages=200):
                 new_lead = Lead(
                     id=lead_id,
                     name=name,
+                    raw_owner=raw_owner,
                     market_id=assigned_market_id,
                     user_id=local_user_id,
                     pipeline=pipeline_name,

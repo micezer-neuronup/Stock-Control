@@ -124,7 +124,7 @@ def get_sdrs_needing_restock():
 
 def get_candidate_leads_from_pool():
     return Lead.query.filter(
-        Lead.user_id.is_(None),
+        (Lead.raw_owner.is_(None)) | (Lead.raw_owner == ''),
         Lead.market_id.isnot(None),
         Lead.score.isnot(None),
         Lead.segment.isnot(None),
