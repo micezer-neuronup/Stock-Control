@@ -400,6 +400,7 @@ def get_dashboard_stats():
         3: "Francia",
         4: "LATAM",
         5: "Italia",
+        6: "USA",
     }
     
     MARKET_FLAGS_BY_ID = {
@@ -408,6 +409,8 @@ def get_dashboard_stats():
         3: "🇫🇷",
         4: "🌎",
         5: "🇮🇹",
+        6: "🇺🇸",
+
     }
     
     MARKET_FLAG_CODES = {
@@ -416,11 +419,12 @@ def get_dashboard_stats():
         3: "fr",
         4: "mx",
         5: "it",
+        6: "us",
     }
 
     market_stacked_data = []
 
-    for market_id in [1, 2, 3, 4, 5]:
+    for market_id in [1, 2, 3, 4, 5, 6]:
         asignados = db.session.query(func.count(Lead.id)).filter(
             Lead.market_id == market_id,
             Lead.user_id.isnot(None),
