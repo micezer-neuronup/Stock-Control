@@ -278,14 +278,3 @@ for lead in leads:
 
 
 
-
-proporcion de mercado para cada ususrio y para poder seleccioanr % de mercado.
-
-si esta el core de lucas, ese
-si no, formula de marta
-crear en hubspot
-
-
-
-
-JO

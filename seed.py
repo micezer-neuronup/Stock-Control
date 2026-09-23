@@ -21,6 +21,7 @@ def seed_database():
             (3, "Francia", "🇫🇷", False),
             (4, "LATAM", "🌎", True),
             (5, "Italia", "🇮🇹", True),
+            (6, "USA", "🇺🇸", False),  
         ]
 
         created = 0

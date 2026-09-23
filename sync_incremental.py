@@ -45,6 +45,7 @@ STAGE_MAP = {
 MARKET_MAPPING = {
     "ES": 1, "BR": 2, "PT": 2, "BRPT": 2,
     "FR": 3, "MX": 4, "LATAM": 4, "IT": 5,
+    "US": 6,
 }
 
 HUBSPOT_LEAD_PROPERTIES = [

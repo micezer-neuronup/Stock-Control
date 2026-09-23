@@ -38,7 +38,7 @@ STAGE_MAP = {
     "5459584225": "Disqualified (Enterprise Leads)",
 }
 
-MARKET_MAPPING = {"ES": 1, "BR": 2, "PT": 2, "BRPT": 2, "FR": 3, "MX": 4, "LATAM": 4, "IT": 5}
+MARKET_MAPPING = {"ES": 1, "BR": 2, "PT": 2, "BRPT": 2, "FR": 3, "MX": 4, "LATAM": 4, "IT": 5, "US": 6}
 
 COLORS = {
     "reset": "\x1b[0m",
