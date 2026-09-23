@@ -449,7 +449,7 @@ def get_dashboard_stats():
         
         total_market = asignados + en_pool
         total_global = total_vivos if total_vivos > 0 else 1
-        pct = round((total_market / total_global) * 100)
+        pct = round((total_market / total_global) * 100, 1)
         
         market_stacked_data.append({
             "name": MARKET_NAMES_BY_ID.get(market_id, f"Mercado {market_id}"),
