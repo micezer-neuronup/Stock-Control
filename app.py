@@ -163,10 +163,20 @@ def get_users():
 
         target_e_percent = u.target_e_percent if u.target_e_percent is not None else None
 
-        # ─── market_breakdown por mercado ────────────────────────────
+        # ─── market_breakdown: TODOS los mercados donde el user tiene leads ───
+        rows = db.session.query(
+            Lead.market_id,
+            func.count(Lead.id)
+        ).filter(
+            Lead.user_id == u.id,
+            Lead.market_id.isnot(None),
+            ~Lead.stage.ilike('%Disqualified%'),
+            ~Lead.stage.ilike('%Qualified%'),
+            ~Lead.pipeline.ilike('%Leads Academy%')
+        ).group_by(Lead.market_id).all()
+
         market_breakdown = {}
-        for m in u.markets:
-            mid = m.id
+        for mid, _ in rows:
             base_q = db.session.query(func.count(Lead.id)).filter(
                 Lead.user_id == u.id,
                 Lead.market_id == mid,
