@@ -402,8 +402,8 @@ def get_dashboard_stats():
     ).filter(ALIVE_FILTER).group_by(Lead.pipeline).all()
 
     pipeline_raw = {name: count for name, count in pipeline_counts}
-    pipeline_mm = pipeline_raw.get("Mid-Market", 0)
-    pipeline_ent = pipeline_raw.get("Enterprise", 0)
+    pipeline_mm = pipeline_raw.get("Mid-Market Leads", 0)
+    pipeline_ent = pipeline_raw.get("Enterprise Leads", 0)
     pipeline_lead = pipeline_raw.get("Lead pipeline", 0)
     pipeline_total = pipeline_mm + pipeline_ent + pipeline_lead
 
@@ -411,8 +411,8 @@ def get_dashboard_stats():
     for raw_name, count in pipeline_counts:
         config = {
             "Lead pipeline": {"name": "Lead",       "color": "#64748b"},
-            "Mid-Market":    {"name": "Mid-Market", "color": "#6366f1"},
-            "Enterprise":    {"name": "Enterprise", "color": "#10b981"},
+            "Mid-Market Leads":    {"name": "Mid-Market", "color": "#6366f1"},
+            "Enterprise Leads":    {"name": "Enterprise", "color": "#10b981"},
         }.get(raw_name, {"name": raw_name or "Otro", "color": "#94a3b8"})
         pipeline_data.append({
             "name": config["name"],
@@ -768,7 +768,7 @@ def get_dashboard_settings():
     }), 200
 
 
-    
+
 @app.route('/api/dashboard-settings', methods=['PUT'])
 def update_dashboard_settings():
     data = request.json or {}
