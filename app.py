@@ -315,16 +315,13 @@ def force_user_restock(user_id):
 
 @app.route('/api/stock-control', methods=['GET'])
 def get_dashboard_stats():
-    # ============================================================
-    # FILTROS BASE
-    # ============================================================
     EXCLUDED_PIPELINES = ['Leads Academy']
-    
+
     ALIVE_FILTER = (
         ~Lead.stage.ilike('%Disqualified%') &
         ~Lead.pipeline.in_(EXCLUDED_PIPELINES)
     )
-    
+
     POOL_FILTER = (
         (Lead.raw_owner.is_(None) | (Lead.raw_owner == '')) &
         Lead.market_id.isnot(None) &
@@ -335,42 +332,49 @@ def get_dashboard_stats():
         ~Lead.stage.ilike('%Qualified%') &
         ~Lead.pipeline.ilike('%Leads Academy%')
     )
-    
+
     WORKLOAD_FILTER = (
         ~Lead.stage.ilike('%Disqualified%') &
         ~Lead.stage.ilike('%Qualified%') &
         ~Lead.pipeline.in_(EXCLUDED_PIPELINES)
     )
-    
-    # ============================================================
-    # 1. HERO METRICS
-    # ============================================================
+
+    # ─── 1. HERO METRICS ────────────────────────────────────
     total_vivos = db.session.query(func.count(Lead.id)).filter(ALIVE_FILTER).scalar() or 0
 
     leads_en_pool = db.session.query(func.count(Lead.id)).filter(
-        POOL_FILTER,
-        Lead.user_id.is_(None)
+        POOL_FILTER, Lead.user_id.is_(None)
     ).scalar() or 0
 
-    # Leads realmente asignados (con user_id)
     asignados_reales = db.session.query(func.count(Lead.id)).filter(
-        ALIVE_FILTER,
-        Lead.user_id.isnot(None)
+        ALIVE_FILTER, Lead.user_id.isnot(None)
     ).scalar() or 0
 
-    avg_score_raw = db.session.query(func.avg(Lead.score)).filter(ALIVE_FILTER).scalar()
+    avg_score_raw = db.session.query(func.avg(Lead.score)).filter(
+        POOL_FILTER, Lead.user_id.is_(None)
+    ).scalar()
     score_promedio = round(avg_score_raw) if avg_score_raw is not None else 0
 
     total_calificados = db.session.query(func.count(Lead.id)).filter(
-        ALIVE_FILTER,
-        Lead.stage.ilike('%Qualified%')
+        ALIVE_FILTER, Lead.stage.ilike('%Qualified%')
     ).scalar() or 0
 
-    porcentaje_calificados = round((total_calificados / total_vivos * 100), 1) if total_vivos > 0 else 0.0
+    total_descalificados = db.session.query(func.count(Lead.id)).filter(
+        ~Lead.pipeline.in_(EXCLUDED_PIPELINES),
+        Lead.stage.ilike('%Disqualified%')
+    ).scalar() or 0
+
+    decididos = total_calificados + total_descalificados
+
+    porcentaje_calificados = (
+        round((total_calificados / decididos * 100), 1) if decididos > 0 else 0.0
+    )
+    porcentaje_descalificados = (
+        round((total_descalificados / decididos * 100), 1) if decididos > 0 else 0.0
+    )
 
     inbound_vivos = db.session.query(func.count(Lead.id)).filter(
-        ALIVE_FILTER,
-        Lead.origin.ilike('%inbound%')
+        ALIVE_FILTER, Lead.origin.ilike('%inbound%')
     ).scalar() or 0
 
     outbound_vivos = db.session.query(func.count(Lead.id)).filter(
@@ -378,102 +382,128 @@ def get_dashboard_stats():
         (Lead.origin.notilike('%inbound%')) | (Lead.origin.is_(None))
     ).scalar() or 0
 
-    # ============================================================
-    # 2. PIPELINE DATA
-    # ============================================================
+    pct_inbound = round((inbound_vivos / total_vivos * 100), 1) if total_vivos > 0 else 0.0
+    pct_outbound = round((outbound_vivos / total_vivos * 100), 1) if total_vivos > 0 else 0.0
+
+    # Scores por bucket
+    score_over_80 = db.session.query(func.count(Lead.id)).filter(
+        ALIVE_FILTER, Lead.score > 80
+    ).scalar() or 0
+    score_60_80 = db.session.query(func.count(Lead.id)).filter(
+        ALIVE_FILTER, Lead.score >= 60, Lead.score <= 80
+    ).scalar() or 0
+    score_under_60 = db.session.query(func.count(Lead.id)).filter(
+        ALIVE_FILTER, Lead.score < 60, Lead.score.isnot(None)
+    ).scalar() or 0
+
+    # ─── 2. PIPELINE ───────────────────────────────────────
     pipeline_counts = db.session.query(
-        Lead.pipeline,
-        func.count(Lead.id)
+        Lead.pipeline, func.count(Lead.id)
     ).filter(ALIVE_FILTER).group_by(Lead.pipeline).all()
 
-    pipeline_map_config = {
-        "Lead pipeline": {"name": "Lead", "color": "#64748b"},
-        "Mid-Market Leads": {"name": "Mid-Market", "color": "#6366f1"},
-        "Enterprise Leads": {"name": "Enterprise", "color": "#10b981"}
-    }
+    pipeline_raw = {name: count for name, count in pipeline_counts}
+    pipeline_mm = pipeline_raw.get("Mid-Market", 0)
+    pipeline_ent = pipeline_raw.get("Enterprise", 0)
+    pipeline_lead = pipeline_raw.get("Lead pipeline", 0)
+    pipeline_total = pipeline_mm + pipeline_ent + pipeline_lead
 
     pipeline_data = []
-    for raw_pipeline, count in pipeline_counts:
-        config = pipeline_map_config.get(raw_pipeline, {"name": raw_pipeline or "Otro", "color": "#94a3b8"})
+    for raw_name, count in pipeline_counts:
+        config = {
+            "Lead pipeline": {"name": "Lead",       "color": "#64748b"},
+            "Mid-Market":    {"name": "Mid-Market", "color": "#6366f1"},
+            "Enterprise":    {"name": "Enterprise", "color": "#10b981"},
+        }.get(raw_name, {"name": raw_name or "Otro", "color": "#94a3b8"})
         pipeline_data.append({
             "name": config["name"],
             "value": count,
-            "color": config["color"]
+            "color": config["color"],
         })
 
-    # ============================================================
-    # 3. LEADS POR MERCADO
-    # ============================================================
-    MARKET_NAMES_BY_ID = {
-        1: "España",
-        2: "Brasil - Portugal",
-        3: "Francia",
-        4: "LATAM",
-        5: "Italia",
-        6: "USA",
-    }
-    
-    MARKET_FLAGS_BY_ID = {
-        1: "🇪🇸",
-        2: "🇧🇷🇵🇹",
-        3: "🇫🇷",
-        4: "🌎",
-        5: "🇮🇹",
-        6: "🇺🇸",
+    def pct_of_pipeline(v):
+        return round((v / pipeline_total * 100), 1) if pipeline_total > 0 else 0.0
 
-    }
-    
-    MARKET_FLAG_CODES = {
-        1: "es",
-        2: "br",
-        3: "fr",
-        4: "mx",
-        5: "it",
-        6: "us",
-    }
+    ratio_mm_ent = round(pipeline_mm / pipeline_ent, 1) if pipeline_ent > 0 else 0.0
+
+    # ─── 3. LEADS POR MERCADO ──────────────────────────────
+    MARKET_NAMES_BY_ID = {1: "España", 2: "Brasil - Portugal", 3: "Francia",
+                          4: "LATAM", 5: "Italia", 6: "USA"}
+    MARKET_FLAGS_BY_ID = {1: "🇪🇸", 2: "🇧🇷🇵🇹", 3: "🇫🇷",
+                          4: "🌎", 5: "🇮🇹", 6: "🇺🇸"}
+    MARKET_FLAG_CODES = {1: "es", 2: "br", 3: "fr", 4: "mx", 5: "it", 6: "us"}
+
+    def count_for(market_id, user_assigned, extra_filters=None, pipeline_like=None):
+        base = ALIVE_FILTER if user_assigned is True else POOL_FILTER
+        q = db.session.query(func.count(Lead.id)).filter(
+            Lead.market_id == market_id,
+            base,
+        )
+        if user_assigned is True:
+            q = q.filter(Lead.user_id.isnot(None))
+        else:
+            q = q.filter(Lead.user_id.is_(None))
+        if pipeline_like:
+            q = q.filter(Lead.pipeline.ilike(pipeline_like))
+        if extra_filters:
+            for f in extra_filters:
+                q = q.filter(f)
+        return q.scalar() or 0
 
     market_stacked_data = []
 
     for market_id in [1, 2, 3, 4, 5, 6]:
-        asignados = db.session.query(func.count(Lead.id)).filter(
-            Lead.market_id == market_id,
-            Lead.user_id.isnot(None),
-            ALIVE_FILTER
-        ).scalar() or 0
+        asignados = count_for(market_id, True)
+        en_pool = count_for(market_id, False)
 
-        en_pool = db.session.query(func.count(Lead.id)).filter(
-            Lead.market_id == market_id,
-            Lead.user_id.is_(None),
-            POOL_FILTER
-        ).scalar() or 0
-        
+        # Pool por pipeline
+        pool_mm = count_for(market_id, False, pipeline_like='%Mid-Market%')
+        pool_ent = count_for(market_id, False, pipeline_like='%Enterprise%')
+
+        # Pool por origen
+        pool_in = count_for(market_id, False, extra_filters=[Lead.origin.ilike('%inbound%')])
+        pool_out = count_for(market_id, False, extra_filters=[
+            (Lead.origin.notilike('%inbound%')) | (Lead.origin.is_(None))
+        ])
+
+        # Asignados por pipeline
+        asig_mm = count_for(market_id, True, pipeline_like='%Mid-Market%')
+        asig_ent = count_for(market_id, True, pipeline_like='%Enterprise%')
+
+        # Asignados por origen
+        asig_in = count_for(market_id, True, extra_filters=[Lead.origin.ilike('%inbound%')])
+        asig_out = count_for(market_id, True, extra_filters=[
+            (Lead.origin.notilike('%inbound%')) | (Lead.origin.is_(None))
+        ])
+
         total_market = asignados + en_pool
         total_global = total_vivos if total_vivos > 0 else 1
-
         raw_pct = (total_market / total_global) * 100
-
         pct = round(raw_pct) if raw_pct >= 1 else round(raw_pct, 1)
 
-        
         market_stacked_data.append({
             "name": MARKET_NAMES_BY_ID.get(market_id, f"Mercado {market_id}"),
             "flag": MARKET_FLAGS_BY_ID.get(market_id, "❓"),
             "flagCode": MARKET_FLAG_CODES.get(market_id, ""),
             "asignados": asignados,
             "enPool": en_pool,
-            "pct": pct
+            "poolMM": pool_mm,
+            "poolENT": pool_ent,
+            "poolIN": pool_in,
+            "poolOUT": pool_out,
+            "asigMM": asig_mm,
+            "asigENT": asig_ent,
+            "asigIN": asig_in,
+            "asigOUT": asig_out,
+            "pct": pct,
         })
 
+    # Sin mercado
     sin_mercado_asignados = db.session.query(func.count(Lead.id)).filter(
-        Lead.market_id.is_(None),
-        Lead.user_id.isnot(None),
-        ALIVE_FILTER
+        Lead.market_id.is_(None), Lead.user_id.isnot(None), ALIVE_FILTER
     ).scalar() or 0
 
     sin_mercado_en_pool = db.session.query(func.count(Lead.id)).filter(
-        Lead.market_id.is_(None),
-        Lead.user_id.is_(None),
-        POOL_FILTER
+        Lead.market_id.is_(None), Lead.user_id.is_(None), POOL_FILTER
     ).scalar() or 0
 
     if sin_mercado_asignados > 0 or sin_mercado_en_pool > 0:
@@ -485,115 +515,95 @@ def get_dashboard_stats():
             "flagCode": "",
             "asignados": sin_mercado_asignados,
             "enPool": sin_mercado_en_pool,
-            "pct": pct
+            "poolMM": 0, "poolENT": 0, "poolIN": 0, "poolOUT": 0,
+            "asigMM": 0, "asigENT": 0, "asigIN": 0, "asigOUT": 0,
+            "pct": pct,
         })
 
-    # ============================================================
-    # 4. DISTRIBUCIÓN POR ESTADOS
-    # ============================================================
+    # ─── 4. ESTADOS ────────────────────────────────────────
     BASE_FILTER = ~Lead.pipeline.in_(EXCLUDED_PIPELINES)
-    
-    new_count = db.session.query(func.count(Lead.id)).filter(BASE_FILTER, Lead.stage.ilike('%New%')).scalar() or 0
-    att_count = db.session.query(func.count(Lead.id)).filter(BASE_FILTER, Lead.stage.ilike('%Attempting%')).scalar() or 0
-    
+
+    new_count = db.session.query(func.count(Lead.id)).filter(
+        BASE_FILTER, Lead.stage.ilike('%New%')
+    ).scalar() or 0
+    att_count = db.session.query(func.count(Lead.id)).filter(
+        BASE_FILTER, Lead.stage.ilike('%Attempting%')
+    ).scalar() or 0
     cont_count = db.session.query(func.count(Lead.id)).filter(
         BASE_FILTER,
-        (Lead.stage.ilike('%Connected%')) | 
-        (Lead.stage.ilike('%Conversation%')) | 
-        (Lead.stage.ilike('%Contacto%')) | 
+        (Lead.stage.ilike('%Connected%')) |
+        (Lead.stage.ilike('%Conversation%')) |
+        (Lead.stage.ilike('%Contacto%')) |
         (Lead.stage.ilike('%Hot%'))
     ).scalar() or 0
-
     qual_count = db.session.query(func.count(Lead.id)).filter(
         BASE_FILTER,
         Lead.stage.ilike('%Qualified%'),
         ~Lead.stage.ilike('%Disqualified%')
     ).scalar() or 0
-
-    disq_count = db.session.query(func.count(Lead.id)).filter(BASE_FILTER, Lead.stage.ilike('%Disqualified%')).scalar() or 0
+    disq_count = db.session.query(func.count(Lead.id)).filter(
+        BASE_FILTER, Lead.stage.ilike('%Disqualified%')
+    ).scalar() or 0
 
     state_data = [
-        {"name": "New", "value": new_count},
-        {"name": "Att.", "value": att_count},
+        {"name": "New",   "value": new_count},
+        {"name": "Att.",  "value": att_count},
         {"name": "Cont.", "value": cont_count},
         {"name": "Qual.", "value": qual_count},
-        {"name": "Disq.", "value": disq_count}
+        {"name": "Disq.", "value": disq_count},
     ]
 
-    # ============================================================
-    # 5. ENTRADA DIARIA
-    # ============================================================
-    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-    
-    daily_activity = (
-        db.session.query(
-            cast(Lead.created_at, Date).label('date'),
-            Lead.origin,
-            func.count(Lead.id).label('count')
-        )
-        .filter(Lead.created_at >= seven_days_ago)
-        .filter(BASE_FILTER)
-        .group_by(cast(Lead.created_at, Date), Lead.origin)
-        .order_by(cast(Lead.created_at, Date))
-        .all()
-    )
-    
-    evolution_dict = {}
-    for row in daily_activity:
-        date_str = row.date.strftime('%d/%m')
-        if date_str not in evolution_dict:
-            evolution_dict[date_str] = {'date': date_str, 'inbound': 0, 'outbound': 0}
-        
-        if row.origin and 'inbound' in row.origin.lower():
-            evolution_dict[date_str]['inbound'] = row.count
-        else:
-            evolution_dict[date_str]['outbound'] = row.count
-    
-    evolution_data = list(evolution_dict.values())
-    evolution_data.sort(key=lambda x: datetime.strptime(x['date'], '%d/%m'))
-    evolution_data = evolution_data[-7:]
-
-    # ============================================================
-    # 6. CARGA POR SDR
-    # ============================================================
+    # ─── 5. CARGA POR SDR ──────────────────────────────────
     users = User.query.all()
     sdr_workload_data = []
-
     for u in users:
         current_stock = db.session.query(func.count(Lead.id)).filter(
-            Lead.user_id == u.id,
-            WORKLOAD_FILTER
+            Lead.user_id == u.id, WORKLOAD_FILTER
         ).scalar() or 0
-
         max_stock = u.max_stock if (u.max_stock and u.max_stock > 0) else 10
-        
-        carga_normal = min(current_stock, max_stock)
-        sobrecarga = max(0, current_stock - max_stock)
-
-        first_name = (u.name or "SDR").split()[0]
-
         sdr_workload_data.append({
-            "name": first_name,
-            "cargaNormal": carga_normal,
-            "sobrecarga": sobrecarga,
+            "name": (u.name or "SDR").split()[0],
+            "cargaNormal": min(current_stock, max_stock),
+            "sobrecarga": max(0, current_stock - max_stock),
             "maxStock": max_stock,
-            "automation_enabled": u.automation_enabled
+            "automation_enabled": u.automation_enabled,
         })
 
+    # ─── RESPONSE ──────────────────────────────────────────
     return jsonify({
         "stats": {
+            # Hero
             "totalLeadsVivos": total_vivos,
             "leadsEnPool": leads_en_pool,
             "asignadosReales": asignados_reales,
             "scorePromedio": score_promedio,
             "porcentajeCalificados": porcentaje_calificados,
+            "porcentajeDescalificados": porcentaje_descalificados,
+            "totalCalificados": total_calificados,
+            "totalDescalificados": total_descalificados,
             "inboundVivos": inbound_vivos,
             "outboundVivos": outbound_vivos,
-            "marketStackedData": market_stacked_data,
+            "pctInbound": pct_inbound,
+            "pctOutbound": pct_outbound,
+            # Score buckets
+            "scoreOver80": score_over_80,
+            "score60to80": score_60_80,
+            "scoreUnder60": score_under_60,
+            # Pipeline
             "pipelineData": pipeline_data,
+            "pipelineMM": pipeline_mm,
+            "pipelineENT": pipeline_ent,
+            "pipelineLead": pipeline_lead,
+            "pipelineMMPct": pct_of_pipeline(pipeline_mm),
+            "pipelineENTPct": pct_of_pipeline(pipeline_ent),
+            "pipelineLeadPct": pct_of_pipeline(pipeline_lead),
+            "ratioMMENT": ratio_mm_ent,
+            # Mercados
+            "marketStackedData": market_stacked_data,
+            # Estados
             "stateData": state_data,
-            "evolutionData": evolution_data,
-            "sdrWorkloadData": sdr_workload_data
+            # SDRs
+            "sdrWorkloadData": sdr_workload_data,
         }
     }), 200
 
@@ -743,6 +753,43 @@ def delete_user_market_targets(user_id):
     db.session.commit()
     return jsonify({"message": "Config eliminada"}), 200
 
+
+@app.route('/api/dashboard-settings', methods=['GET'])
+def get_dashboard_settings():
+    setting = GlobalSettings.query.first()
+    if not setting:
+        setting = GlobalSettings(automation_enabled=True)
+        db.session.add(setting)
+        db.session.commit()
+    return jsonify({
+        "pool_auto_rotate": setting.pool_auto_rotate or False,
+        "assigned_auto_rotate": setting.assigned_auto_rotate or False,
+        "metrics_auto_rotate": setting.metrics_auto_rotate or False,   # ← nuevo
+    }), 200
+
+
+    
+@app.route('/api/dashboard-settings', methods=['PUT'])
+def update_dashboard_settings():
+    data = request.json or {}
+    setting = GlobalSettings.query.first()
+    if not setting:
+        setting = GlobalSettings(automation_enabled=True)
+        db.session.add(setting)
+
+    if "pool_auto_rotate" in data:
+        setting.pool_auto_rotate = bool(data["pool_auto_rotate"])
+    if "assigned_auto_rotate" in data:
+        setting.assigned_auto_rotate = bool(data["assigned_auto_rotate"])
+    if "metrics_auto_rotate" in data:                                   # ← nuevo
+        setting.metrics_auto_rotate = bool(data["metrics_auto_rotate"])
+
+    db.session.commit()
+    return jsonify({
+        "pool_auto_rotate": setting.pool_auto_rotate or False,
+        "assigned_auto_rotate": setting.assigned_auto_rotate or False,
+        "metrics_auto_rotate": setting.metrics_auto_rotate or False,   # ← nuevo
+    }), 200
 
 
 

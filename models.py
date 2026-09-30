@@ -16,7 +16,11 @@ class GlobalSettings(db.Model):
     __tablename__ = 'global_settings'
     id = db.Column(db.Integer, primary_key=True)
     automation_enabled = db.Column(db.Boolean, default=True)
-    last_sync_timestamp = db.Column(db.DateTime, nullable=True)  
+    last_sync_timestamp = db.Column(db.DateTime, nullable=True)
+    pool_auto_rotate = db.Column(db.Boolean, default=False)        # ← nuevo
+    assigned_auto_rotate = db.Column(db.Boolean, default=False)    # ← nuevo
+    metrics_auto_rotate = db.Column(db.Boolean, default=False)   # ← nuevo
+
 
 class Market(db.Model):
     __tablename__ = 'markets'

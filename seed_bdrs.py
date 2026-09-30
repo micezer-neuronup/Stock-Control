@@ -153,29 +153,73 @@ BDR_LIST = [
         "restock_threshold": 3,
         "automation_enabled": False,
     },
-    {
-        "name": "Aldo Hernandez Salazar",
-        "email": "aldo.hernandez@empresa.com",
-        "role": "SDR",
-        "hubspot_user_id": "",
-        "market_id": 4,
-        "max_stock": 10,
-        "restock_threshold": 3,
-        "automation_enabled": False,
-    },
-
+        # {
+    #     "name": "Aldo Hernandez Salazar",
+    #     "email": "aldo.hernandez@empresa.com",
+    #     "role": "SDR",
+    #     "hubspot_user_id": "",
+    #     "market_id": 4,
+    #     "max_stock": 10,
+    #     "restock_threshold": 3,
+    #     "automation_enabled": False,
+    # },
     # ------------------ MICHAEL (activo para la prueba) ------------------
+    #{
+    #   "name": "Michael Ezeh",
+    #    "email": "michael.ezeh@neuronup.com",
+    #    "role": "SDR",
+    #    "hubspot_user_id": "32695483",
+    #    "market_id": 1,
+    #    "max_stock": 10,
+    #    "restock_threshold": 3,
+    #    "automation_enabled": False,   # ← único activo
+    #    "target_e_percent": 60,
+    #},
     {
-        "name": "Michael Ezeh",
-        "email": "michael.ezeh@neuronup.com",
+        "name": "Zeus Lara Andrades",
+        "email": "zeus.lara@neuronup.com",
         "role": "SDR",
-        "hubspot_user_id": "32695483",
+        "hubspot_user_id": "38354975",
         "market_id": 1,
         "max_stock": 10,
         "restock_threshold": 3,
-        "automation_enabled": True,   # ← único activo
+        "automation_enabled": False,   # ← único activo
         "target_e_percent": 60,
     },
+    {
+        "name": "Albane Jeanblanc",
+        "email": "albane.jeanblanc@neuronup.com",
+        "role": "SDR",
+        "hubspot_user_id": "31786971",
+        "market_id": 1,
+        "max_stock": 10,
+        "restock_threshold": 3,
+        "automation_enabled": False,   # ← único activo
+        "target_e_percent": 60,
+    },
+    {
+        "name": "Fabio Palazzo",
+        "email": "fabio.palazzo@neuronup.com",
+        "role": "SDR",
+        "hubspot_user_id": "38393431",
+        "market_id": 1,
+        "max_stock": 10,
+        "restock_threshold": 3,
+        "automation_enabled": False,   # ← único activo
+        "target_e_percent": 60,
+    },
+    {
+        "name": "Caroline Chaudoy",
+        "email": "caroline.chaudoy@neuronup.com",
+        "role": "SDR",
+        "hubspot_user_id": "38393442",
+        "market_id": 1,
+        "max_stock": 10,
+        "restock_threshold": 3,
+        "automation_enabled": False,   # ← único activo
+        "target_e_percent": 60,
+    },
+
 ]
 
 
