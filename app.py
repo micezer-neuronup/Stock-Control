@@ -449,6 +449,15 @@ def get_dashboard_stats():
                 q = q.filter(f)
         return q.scalar() or 0
 
+    
+    market_alive_counts = dict(
+        db.session.query(Lead.market_id, func.count(Lead.id))
+        .filter(ALIVE_FILTER, Lead.market_id.isnot(None))
+        .group_by(Lead.market_id)
+        .all()
+    )
+    total_alive_with_market = sum(market_alive_counts.values()) or 1
+
     market_stacked_data = []
 
     for market_id in [1, 2, 3, 4, 5, 6]:
@@ -475,10 +484,9 @@ def get_dashboard_stats():
             (Lead.origin.notilike('%inbound%')) | (Lead.origin.is_(None))
         ])
 
-        total_market = asignados + en_pool
-        total_global = total_vivos if total_vivos > 0 else 1
-        raw_pct = (total_market / total_global) * 100
-        pct = round(raw_pct) if raw_pct >= 1 else round(raw_pct, 1)
+        alive_in_market = market_alive_counts.get(market_id, 0)
+        raw_pct = (alive_in_market  / total_alive_with_market) * 100
+        pct = round(raw_pct, 1)
 
         market_stacked_data.append({
             "name": MARKET_NAMES_BY_ID.get(market_id, f"Mercado {market_id}"),
@@ -507,8 +515,10 @@ def get_dashboard_stats():
     ).scalar() or 0
 
     if sin_mercado_asignados > 0 or sin_mercado_en_pool > 0:
-        raw_pct = ((sin_mercado_asignados + sin_mercado_en_pool) / (total_vivos if total_vivos > 0 else 1)) * 100
-        pct = round(raw_pct) if raw_pct >= 1 else round(raw_pct, 1)
+        sin_mercado_alive = db.session.query(func.count(Lead.id)).filter(
+            ALIVE_FILTER, Lead.market_id.is_(None)
+        ).scalar() or 0
+        raw_pct = (sin_mercado_alive / (total_alive_with_market + sin_mercado_alive)) * 100
         market_stacked_data.append({
             "name": "Sin mercado",
             "flag": "❓",
@@ -517,7 +527,7 @@ def get_dashboard_stats():
             "enPool": sin_mercado_en_pool,
             "poolMM": 0, "poolENT": 0, "poolIN": 0, "poolOUT": 0,
             "asigMM": 0, "asigENT": 0, "asigIN": 0, "asigOUT": 0,
-            "pct": pct,
+            "pct": round(raw_pct, 1),
         })
 
     # ─── 4. ESTADOS ────────────────────────────────────────
