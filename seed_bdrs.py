@@ -184,7 +184,6 @@ BDR_LIST = [
         "max_stock": 10,
         "restock_threshold": 3,
         "automation_enabled": False,   # ← único activo
-        "target_e_percent": 60,
     },
     {
         "name": "Albane Jeanblanc",
@@ -195,7 +194,6 @@ BDR_LIST = [
         "max_stock": 10,
         "restock_threshold": 3,
         "automation_enabled": False,   # ← único activo
-        "target_e_percent": 60,
     },
     {
         "name": "Fabio Palazzo",
@@ -206,7 +204,6 @@ BDR_LIST = [
         "max_stock": 10,
         "restock_threshold": 3,
         "automation_enabled": False,   # ← único activo
-        "target_e_percent": 60,
     },
     {
         "name": "Caroline Chaudoy",
@@ -217,7 +214,16 @@ BDR_LIST = [
         "max_stock": 10,
         "restock_threshold": 3,
         "automation_enabled": False,   # ← único activo
-        "target_e_percent": 60,
+    },
+    {
+        "name": "Miguel Idoate",
+        "email": "miguel.idoate@neuronup.com,
+        "role": "CM",
+        "hubspot_user_id": "110885496",
+        "market_id": 4,
+        "max_stock": 25,
+        "restock_threshold": 20,
+        "automation_enabled": False,   # ← único activo
     },
 
 ]
