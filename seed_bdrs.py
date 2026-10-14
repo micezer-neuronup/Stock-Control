@@ -207,7 +207,7 @@ BDR_LIST = [
     },
     {
         "name": "Miguel Idoate",
-        "email": "miguel.idoate@neuronup.com,
+        "email": "miguel.idoate@neuronup.com",
         "role": "CM",
         "hubspot_user_id": "110885496",
         "market_id": 4,
