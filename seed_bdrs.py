@@ -153,16 +153,6 @@ BDR_LIST = [
         "restock_threshold": 3,
         "automation_enabled": False,
     },
-        # {
-    #     "name": "Aldo Hernandez Salazar",
-    #     "email": "aldo.hernandez@empresa.com",
-    #     "role": "SDR",
-    #     "hubspot_user_id": "",
-    #     "market_id": 4,
-    #     "max_stock": 10,
-    #     "restock_threshold": 3,
-    #     "automation_enabled": False,
-    # },
     # ------------------ MICHAEL (activo para la prueba) ------------------
     #{
     #   "name": "Michael Ezeh",
