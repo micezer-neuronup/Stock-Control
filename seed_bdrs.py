@@ -162,7 +162,7 @@ BDR_LIST = [
     #    "market_id": 1,
     #    "max_stock": 10,
     #    "restock_threshold": 3,
-    #    "automation_enabled": False,   # ← único activo
+    #    "automation_enabled": False,   
     #    "target_e_percent": 60,
     #},
     {
@@ -173,7 +173,7 @@ BDR_LIST = [
         "market_id": 1,
         "max_stock": 10,
         "restock_threshold": 3,
-        "automation_enabled": False,   # ← único activo
+        "automation_enabled": False,  
     },
     {
         "name": "Albane Jeanblanc",
@@ -183,7 +183,7 @@ BDR_LIST = [
         "market_id": 1,
         "max_stock": 10,
         "restock_threshold": 3,
-        "automation_enabled": False,   # ← único activo
+        "automation_enabled": False,   
     },
     {
         "name": "Fabio Palazzo",
@@ -193,7 +193,7 @@ BDR_LIST = [
         "market_id": 1,
         "max_stock": 10,
         "restock_threshold": 3,
-        "automation_enabled": False,   # ← único activo
+        "automation_enabled": False,  
     },
     {
         "name": "Caroline Chaudoy",
@@ -203,7 +203,7 @@ BDR_LIST = [
         "market_id": 1,
         "max_stock": 10,
         "restock_threshold": 3,
-        "automation_enabled": False,   # ← único activo
+        "automation_enabled": False,   
     },
     {
         "name": "Miguel Idoate",
@@ -213,8 +213,19 @@ BDR_LIST = [
         "market_id": 4,
         "max_stock": 25,
         "restock_threshold": 20,
-        "automation_enabled": False,   # ← único activo
+        "automation_enabled": False,   
     },
+    {
+        "name": "David Douton",
+        "email": "david.douton@neuronup.com",
+        "role": "SDR",
+        "hubspot_user_id": "39144617",
+        "market_id": 1,
+        "max_stock": 25,
+        "restock_threshold": 20,
+        "automation_enabled": False,   
+    },
+
 
 ]
 
