@@ -225,6 +225,16 @@ BDR_LIST = [
         "restock_threshold": 20,
         "automation_enabled": False,   
     },
+    {
+        "name": "Léa Elhar",
+        "email": "lea.elhar@neuronup.com",
+        "role": "SM",
+        "hubspot_user_id": "36961963",
+        "market_id": 3,
+        "max_stock": 25,
+        "restock_threshold": 20,
+        "automation_enabled": False,   
+    },
 
 
 ]
