@@ -230,6 +230,17 @@ def _do_sync(since_ts, max_pages=2000):
         new_last_sync = datetime.utcfromtimestamp(max_lastmodified_ms / 1000.0)
     else:
         new_last_sync = datetime.utcnow()
+    
+    relinked = db.session.execute(db.text("""
+        UPDATE leads l
+        SET user_id = u.id
+        FROM users u
+        WHERE l.raw_owner = u.hubspot_user_id
+          AND l.user_id IS DISTINCT FROM u.id
+    """)).rowcount
+    db.session.commit()
+    if relinked:
+        print(f"🔗 Re-link: {relinked} leads reasignados a usuarios existentes")
 
     return imported, updated, skipped_academy, new_last_sync, had_error
 
